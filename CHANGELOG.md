@@ -2,6 +2,40 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/).
 
+## [Non publié] — Étape 3 : enveloppe (correctif + évolution)
+
+### Corrigé
+
+- **Issue #28** — Deux marquages de présence quasi simultanés sur le même
+  (session, étudiant) pouvaient produire une `500 ERREUR_INTERNE` au lieu du
+  `409 DEJA_PRESENT` attendu : le contrôle d'unicité et l'insertion n'étaient
+  pas atomiques, et la violation de contrainte concurrente n'était pas
+  interceptée. Reproduit par un test qui échoue (`PresenceConcurrenceIT`)
+  avant d'être corrigé dans `PresenceService.enregistrerOuDejaPresent`
+  (PR #29, branche `fix/28-course-marquage-presence-concurrent`).
+
+### Ajouté — Évolution (changement de besoin, issue #30)
+
+- **Deux relecteurs par exercice** (RG4/RG5 révisées) : `RelectureAssignmentService`
+  tire désormais jusqu'à deux relecteurs distincts, hors auteur, parmi les
+  présents.
+- **Note retenue = moyenne des relectures rendues** (EF9bis) ; `GET
+  /api/exercices/{id}/note` renvoie `note` en `number` (plus `integer`) et un
+  nouveau champ `provisoire` (`true` tant que l'une des deux relectures
+  assignées n'a pas rendu).
+- Migration Flyway additive `V3__deux_relecteurs.sql` : remplace l'unicité
+  `relecture.exercice_id` (un seul relecteur) par l'unicité du couple
+  `(exercice_id, relecteur_id)`, sans toucher `V1`/`V2`, données existantes
+  préservées.
+- Écran étudiant : mention « (provisoire) » et bandeau explicatif tant que
+  la note n'est pas définitive.
+- **Sacrifice de périmètre** (voir `docs/JOURNAL.md`, étape 3) : les
+  exercices déjà relus avant cette évolution ne sont pas rétro-migrés vers
+  deux relecteurs ; pas de rattrapage automatique si un second candidat
+  devient présent après l'assignation initiale.
+- Branche et PR séparées de celles du correctif #28, conformément à
+  l'enveloppe.
+
 ## [0.1.0] — Première version (Must + Should + Could)
 
 ### Ajouté

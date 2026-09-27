@@ -180,16 +180,21 @@ export default function EcranEtudiant() {
             {exercice ? "Remplacer le lien" : "Déposer l'exercice"}
           </button>
 
-          {note && note.statut === "RENDUE" && (
+          {note && note.note !== null && (
             <div className="carte" style={{ marginTop: 16, background: "var(--couleur-fond)" }}>
-              <h3>Ma note</h3>
+              <h3>Ma note{note.provisoire ? " (provisoire)" : ""}</h3>
               <p>
-                <strong>{note.note}/20</strong>
+                <strong>{note.note.toFixed(1)}/20</strong>
               </p>
               <p>{note.commentaire}</p>
+              {note.provisoire && (
+                <p className="banniere banniere--info">
+                  Un seul relecteur a rendu sa note pour l'instant ; cette note est provisoire en attendant le second avis.
+                </p>
+              )}
             </div>
           )}
-          {note && note.statut !== "RENDUE" && exercice && <p>Relecture pas encore rendue.</p>}
+          {note && note.note === null && exercice && <p>Relecture pas encore rendue.</p>}
         </section>
       )}
     </div>

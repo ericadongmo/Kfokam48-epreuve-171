@@ -224,6 +224,12 @@ paths:
       description: |
         Retourne la note et le commentaire, jamais le relecteur.
         Réf. EF14 · RG6 · Q8.
+
+        Évolution étape 3 (RG4/RG5 révisées, EF9bis) : chaque exercice est
+        relu par jusqu'à deux relecteurs distincts. `note` est la moyenne
+        des relectures rendues (`number`, non arrondie) ; `provisoire` vaut
+        `true` tant que l'une des relectures assignées n'a pas encore rendu ;
+        `commentaire` est celui de la dernière relecture rendue.
       parameters:
         - name: id
           in: path
@@ -236,11 +242,16 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [statut]
+                required: [statut, provisoire]
                 properties:
                   statut: { type: string, enum: [EN_ATTENTE, EN_COURS, RENDUE] }
-                  note: { type: integer, minimum: 0, maximum: 20, nullable: true }
+                  note: { type: number, minimum: 0, maximum: 20, nullable: true }
                   commentaire: { type: string, nullable: true }
+                  provisoire:
+                    type: boolean
+                    description: |
+                      true si au moins une des relectures assignées n'a pas
+                      encore rendu sa note (évolution étape 3).
         "403": { $ref: "#/components/responses/Erreur" }   # ACCES_REFUSE
         "404": { $ref: "#/components/responses/Erreur" }   # EXERCICE_INCONNU
 

@@ -82,11 +82,12 @@ public class ExerciceService {
             throw ApiException.sessionCloturee();
         }
 
-        relectureRepository.findByExerciceId(exerciceId)
-                .filter(r -> r.getStatut() != StatutRelecture.EN_ATTENTE)
-                .ifPresent(r -> {
-                    throw ApiException.remplacementImpossible();
-                });
+        // RG10, étendue étape 3 : bloqué dès qu'UNE des relectures assignées a démarré.
+        boolean uneRelectureACommence = relectureRepository.findByExerciceId(exerciceId).stream()
+                .anyMatch(r -> r.getStatut() != StatutRelecture.EN_ATTENTE);
+        if (uneRelectureACommence) {
+            throw ApiException.remplacementImpossible();
+        }
 
         exercice.setLien(lien);
         exercice = exerciceRepository.save(exercice);

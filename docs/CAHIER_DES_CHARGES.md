@@ -69,8 +69,9 @@ L'objectif n'est pas de remplacer un ENT complet, mais de couvrir le strict beso
 | EF5 | Le formateur peut ajouter une présence manuellement | Quand j'ajoute un étudiant à la main, alors sa présence est enregistrée avec `source = FORMATEUR` et apparaît comme telle dans le tableau | Must |
 | EF6 | L'étudiant dépose le lien de son exercice | Quand je soumets `sessionId` + `etudiantId` + `lien` (URL valide) et sans exercice préexistant, alors je reçois `id` et `statut = DEPOSE` | Must |
 | EF7 | Le système refuse un second dépôt | Quand je dépose un exercice pour une session où j'en ai déjà un, alors je reçois `409 { code: "EXERCICE_DEJA_DEPOSE" }` | Must |
-| EF8 | Le système assigne un relecteur unique | Quand un exercice est déposé **et qu'au moins un étudiant présent autre que l'auteur existe**, alors une relecture est créée avec `statut = EN_ATTENTE` | Must |
-| EF9 | Le relecteur rend sa note | Quand je soumets `note` entière 0–20 + `commentaire` sur une relecture qui m'est assignée et non encore rendue, alors je reçois `200` et la relecture passe `RENDUE` | Must |
+| EF8 | Le système assigne jusqu'à deux relecteurs distincts *(révisée étape 3, était : « un relecteur unique »)* | Quand un exercice est déposé **et qu'au moins un étudiant présent autre que l'auteur existe**, alors une à deux relectures sont créées avec `statut = EN_ATTENTE`, selon le nombre de candidats disponibles (au plus deux, jamais le même candidat deux fois) | Must |
+| EF9 | Chaque relecteur rend sa note indépendamment | Quand je soumets `note` entière 0–20 + `commentaire` sur une relecture qui m'est assignée et non encore rendue, alors je reçois `200` et cette relecture passe `RENDUE` (l'autre relecture du même exercice, s'il y en a une, n'est pas affectée) | Must |
+| EF9bis | L'étudiant relu voit une note unique, moyenne des relectures rendues *(ajoutée étape 3)* | Quand je consulte `GET /api/exercices/{id}/note` : si aucune relecture n'est rendue, `statut = EN_ATTENTE` ; si une seule des relectures assignées est rendue, je reçois sa note avec `provisoire = true` ; si toutes les relectures assignées sont rendues, je reçois la moyenne avec `provisoire = false` | Must |
 | EF10 | Le relecteur corrige sa note tant que la session est ouverte | Quand je resoumets une note sur une relecture déjà rendue et que la session n'est pas clôturée, alors ma nouvelle note remplace l'ancienne | Must |
 | EF11 | Le système interdit l'auto-relecture | Quand je tente de rendre une relecture sur mon propre exercice, alors je reçois `403 { code: "AUTO_RELECTURE" }` | Must |
 | EF12 | Le tableau formateur affiche le récapitulatif | Quand je consulte `GET /api/tableau?promotionId=` pour une promotion connue, alors j'obtiens par étudiant : `presences`, `exercicesDeposes`, `moyenne` (nullable), `relecturesEnAttente` | Must |
@@ -103,8 +104,8 @@ L'objectif n'est pas de remplacer un ENT complet, mais de couvrir le strict beso
 | RG1 | Un code de présence expire 15 minutes après l'ouverture de la session | Q2 |
 | RG2 | Un étudiant ne peut pas relire son propre exercice | Q5 |
 | RG3 | Une note est un entier compris entre 0 et 20 (bornes incluses) | Q9 |
-| RG4 | Un exercice n'a qu'un seul relecteur | Q6 |
-| RG5 | Le relecteur est choisi au hasard parmi les étudiants présents à la session, hors auteur | Q7 |
+| RG4 | ~~Un exercice n'a qu'un seul relecteur~~ **Révisée (évolution étape 3) : un exercice est relu par deux relecteurs distincts** ; la note retenue est la moyenne des notes rendues, affichée comme provisoire tant que l'un des deux n'a pas rendu | Q6, révisée par le changement de besoin étape 3 |
+| RG5 | Les deux relecteurs sont choisis au hasard parmi les étudiants présents à la session, hors auteur, et distincts entre eux | Q7, révisée par le changement de besoin étape 3 |
 | RG6 | L'étudiant relu voit sa note et le commentaire, mais jamais le nom du relecteur | Q8 |
 | RG7 | La note est modifiable par le relecteur tant que la session n'est pas clôturée | Q10 |
 | RG8 | Une relecture non rendue laisse l'exercice en attente et cette attente est visible dans le tableau | Q11 |
@@ -142,6 +143,21 @@ L'objectif n'est pas de remplacer un ENT complet, mais de couvrir le strict beso
 | **Annexe B** : `POST /api/lectures/{id}` **vs `api/contrat.yaml`** : `POST /api/relectures/{id}` | **Le YAML prime** (`/api/relectures/{id}`) | Le sujet qualifie l'annexe B d'« extrait lisible » ; le contrat YAML est la source de vérité technique. |
 
 > Une hypothèse écrite est toujours acceptée. Une hypothèse silencieuse est une faute.
+
+### Évolution étape 3 — deux relecteurs par exercice (changement de besoin)
+
+Le client est revenu après la version 0.1 : un relecteur unique laisse l'étudiant sans note quand ce relecteur ne rend rien. Nouvelle règle (RG4/RG5 révisées ci-dessus) : **deux relecteurs distincts par exercice**, note retenue = moyenne des notes rendues, affichée comme **provisoire** tant que l'un des deux n'a pas rendu.
+
+**Ce que la demande ne tranche pas et que j'ai dû décider :**
+
+| Point | Décision retenue | Conséquence |
+|---|---|---|
+| Moins de deux candidats présents au moment de l'assignation (0 ou 1) | On assigne autant que possible (0, 1 ou 2), sans attendre | Un exercice peut rester avec un seul relecteur assigné en permanence ; sa note, une fois rendue, est définitive (pas de second relecteur à attendre), voir sacrifice ci-dessous |
+| Un étudiant devient présent *après* l'assignation initiale (encore un seul relecteur assigné) | Pas de rattrapage automatique | Sacrifice explicite (périmètre), voir `docs/JOURNAL.md` |
+| Exercices déjà relus avant cette évolution (un seul relecteur, note déjà rendue) | Conservés tels quels, non re-migrés vers deux relecteurs | Sacrifice explicite (périmètre), voir `docs/JOURNAL.md` |
+| Arrondi de la moyenne des deux notes | Non arrondie côté API (`number`), arrondie à l'affichage frontend uniquement | Cohérent avec ENF7 : la règle de calcul reste unique, côté API |
+
+**Sacrifice de périmètre pour absorber ce Must arrivé tard :** voir `docs/JOURNAL.md`, section Étape 3.
 
 ---
 

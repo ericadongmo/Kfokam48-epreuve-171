@@ -99,7 +99,7 @@ classDiagram
     Session "1" --> "0..*" Exercice : porte
     Etudiant "1" --> "0..*" Exercice : dépose
 
-    Exercice "1" --> "0..1" Relecture : est relu par
+    Exercice "1" --> "0..2" Relecture : est relu par
     Etudiant "1" --> "0..*" Relecture : assure
 
     Etudiant "1" --> "0..*" TentativeCode : tente
@@ -115,5 +115,8 @@ classDiagram
 | ------------------------------------------- | --------------------------------- | ----------------------------- |
 | Etudiant ↔ Presence                         | 1..\* mais **unique par session** | RG13                          |
 | Etudiant ↔ Exercice                         | 1..\* mais **unique par session** | RG14                          |
-| Exercice ↔ Relecture                        | **0..1**                          | RG4 (Q6) + EF8 conditionnelle |
+| Exercice ↔ Relecture                        | **0..2**                          | RG4 révisée (évolution étape 3, cf. section 7) + EF8 conditionnelle |
 | Relecture.relecteurId ≠ Exercice.etudiantId | contrainte applicative            | RG2 (Q5)                      |
+| Relecture.relecteurId (au sein d'un même exercice) | **distincts entre eux** | RG5 révisée (évolution étape 3) |
+
+> **Évolution étape 3 (enveloppe, changement de besoin) :** la contrainte d'unicité `relecture.exercice_id` (1 relecteur par exercice, `V1__init.sql`) est remplacée par une unicité du couple `(exercice_id, relecteur_id)` dans `V3__deux_relecteurs.sql` — deux relectures par exercice au maximum, jamais deux fois le même relecteur. Migration additive, `V1`/`V2` non modifiées (C2).
