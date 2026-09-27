@@ -2,7 +2,7 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/).
 
-## [Non publié] — Étape 3 : enveloppe (correctif + évolution)
+## [1.0.0] — Version finale (étape 3 : correctif + évolution)
 
 ### Corrigé
 
