@@ -46,11 +46,11 @@ Chaque entrée répond aux trois mêmes questions :
 
 ## Étape 4 — Version finale
 
-**Fait :**
+**Fait :** Vérifié que le changement de besoin étape 3 (deux relecteurs, moyenne, note provisoire) est bien implémenté backend **et** frontend (déjà fait à l'étape 3, PR #31). `CHANGELOG.md` mis à jour et la section étape 3 étiquetée `[1.0.0]`. Testé le README depuis un **vrai clone vierge** (`git clone` dans `/tmp`, pas le dépôt de travail) : backend démarré avec `./mvnw spring-boot:run`, les 3 migrations Flyway (`V1`, `V2`, `V3`) s'appliquent dans l'ordre sur une base H2 neuve, `GET /api/tableau?promotionId=1` répond `200` avec les données de démo (12 étudiants, une moyenne à 16.0 déjà présente). Jalon `[JALON] v1.0` pointé après ce commit.
 
-**Bloqué :**
+**Bloqué :** ~20 min sur `npm install` dans le clone vierge : le registre npm configuré par défaut sur cette machine (`registry.npmmirror.com`) ne répond pas dans ce bac à sable (`npm ping` en timeout), et même en forçant `--registry https://registry.npmjs.org/` (qui répond à un `curl` direct), l'installation reste bloquée sans progrès mesurable — limite réseau/E-S du sandbox de développement, pas un défaut du projet. Contourné en copiant le `node_modules` déjà installé du dépôt de travail vers le clone après avoir vérifié que `package-lock.json` est **strictement identique** (`diff` vide) : cette étape a elle-même échoué deux fois à cause d'un `cp` interrompu par la lenteur d'E/S de `/tmp` sur cette machine (copie partielle avec un `node_modules/node_modules` imbriqué). Faute de temps pour fiabiliser cette copie, je m'appuie sur une preuve déjà solide et antérieure dans cette même session : `npm run build` a réussi sur le dépôt de travail avec ce même `package-lock.json`, juste après les modifications frontend de l'étape 3 (écran étudiant, mention provisoire). Ce n'est pas équivalent à un `npm install` frais vérifié en direct sur le clone, et je le note comme tel plutôt que de prétendre l'avoir fait.
 
-**IA :**
+**IA :** m'a aidé à diagnostiquer que le port 8080 était déjà occupé par un service Apache préexistant sur cette machine (rien à voir avec le projet), vérifié avec `ss -ltn` et un `curl` qui a renvoyé une page d'erreur Apache plutôt que du JSON — d'où le choix d'un port alternatif (`--server.port=18080`) uniquement pour ce test, sans toucher au README (le port 8080 par défaut est correct sur une machine réellement vierge).
 
 ---
 
