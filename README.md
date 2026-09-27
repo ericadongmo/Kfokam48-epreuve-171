@@ -58,8 +58,8 @@ cd backend
   contrôleur, DTO uniquement en sortie des contrôleurs (B3, ENF7).
 - Toute erreur passe par un `@RestControllerAdvice` unique et respecte le
   format imposé `{ code, message }`, jamais de stack trace (B4, ENF3).
-- Schéma versionné par Flyway (`V1__init.sql`, `V2__donnees_demo.sql`),
-  `ddl-auto=validate` (B5).
+- Schéma versionné par Flyway (`V1__init.sql`, `V2__donnees_demo.sql`,
+  `V3__deux_relecteurs.sql`), `ddl-auto=validate` (B5).
 - `api/contrat.yaml` respecté à la lettre pour les 5 opérations imposées,
   plus les opérations libres nécessaires aux trois écrans (clôture, ajout
   manuel de présence, consultation de note, listes promotions/étudiants,
