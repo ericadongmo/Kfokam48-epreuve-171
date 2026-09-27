@@ -8,6 +8,7 @@ import com.kfokam.presencekf.repository.EtudiantRepository;
 import com.kfokam.presencekf.repository.PresenceRepository;
 import com.kfokam.presencekf.repository.SessionRepository;
 import com.kfokam.presencekf.web.dto.PresenceResponse;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -48,7 +49,7 @@ public class PresenceService {
             throw ApiException.dejaPresent();
         }
 
-        Presence presence = enregistrer(session.getId(), etudiantId, SourcePresence.ETUDIANT);
+        Presence presence = enregistrerOuDejaPresent(session.getId(), etudiantId, SourcePresence.ETUDIANT);
         return toResponse(presence);
     }
 
@@ -83,7 +84,7 @@ public class PresenceService {
             throw ApiException.dejaPresent();
         }
 
-        Presence presence = enregistrer(sessionId, etudiantId, SourcePresence.FORMATEUR);
+        Presence presence = enregistrerOuDejaPresent(sessionId, etudiantId, SourcePresence.FORMATEUR);
         return toResponse(presence);
     }
 
@@ -92,13 +93,25 @@ public class PresenceService {
         return presenceRepository.findBySessionId(sessionId);
     }
 
-    private Presence enregistrer(Long sessionId, Long etudiantId, SourcePresence source) {
+    /**
+     * Issue #28 : le contrôle {@code existsBySessionIdAndEtudiantId} ci-dessus
+     * n'est pas atomique avec cet enregistrement. Sous deux requêtes vraiment
+     * concurrentes sur le même (session, étudiant), la seconde peut passer le
+     * contrôle avant que la première ne commite ; elle percute alors la
+     * contrainte unique {@code uk_presence_session_etudiant} en base. On la
+     * traduit ici en 409 DEJA_PRESENT au lieu de laisser fuiter une 500.
+     */
+    private Presence enregistrerOuDejaPresent(Long sessionId, Long etudiantId, SourcePresence source) {
         Presence presence = new Presence();
         presence.setSessionId(sessionId);
         presence.setEtudiantId(etudiantId);
         presence.setSource(source);
         presence.setMarqueeAt(Instant.now());
-        return presenceRepository.save(presence);
+        try {
+            return presenceRepository.saveAndFlush(presence);
+        } catch (DataIntegrityViolationException e) {
+            throw ApiException.dejaPresent();
+        }
     }
 
     private PresenceResponse toResponse(Presence presence) {
