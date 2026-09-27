@@ -50,6 +50,8 @@ export interface NoteExercice {
   statut: StatutRelecture;
   note: number | null;
   commentaire: string | null;
+  /** Évolution étape 3 : true tant que l'une des deux relectures assignées n'a pas rendu. */
+  provisoire: boolean;
 }
 
 export interface RelectureAssignee {

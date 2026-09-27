@@ -4,11 +4,11 @@ import com.kfokam.presencekf.domain.Relecture;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
-import java.util.Optional;
 
 public interface RelectureRepository extends JpaRepository<Relecture, Long> {
 
-    Optional<Relecture> findByExerciceId(Long exerciceId);
+    /** Évolution étape 3 : jusqu'à deux relectures par exercice (RG4/RG5 révisées). */
+    List<Relecture> findByExerciceId(Long exerciceId);
 
     List<Relecture> findByRelecteurIdIn(List<Long> relecteurIds);
 

@@ -34,13 +34,13 @@ Chaque entrée répond aux trois mêmes questions :
 
 ## Étape 3 — Enveloppe
 
-**Fait :**
+**Fait :** (1) Bug de concurrence sur le marquage de présence : issue #28 ouverte avec la reproduction avant tout code, test `PresenceConcurrenceIT` rouge (`[201, 500]`) commité seul, puis correctif (`PresenceService.enregistrerOuDejaPresent` intercepte la violation de contrainte unique concurrente et la traduit en `409 DEJA_PRESENT`) dans un second commit, branche `fix/28-...`, PR #29 mergée. (2) Évolution « deux relecteurs » : issue #30, cahier des charges et D2 mis à jour dans un commit dédié *avant* le code, `api/contrat.yaml` mis à jour, migration additive `V3__deux_relecteurs.sql` (V1/V2 non touchées), `RelectureAssignmentService` / `RelectureService.noteDeExercice` / `ExerciceService.remplacerLien` adaptés, écran étudiant affiche la mention provisoire, tests unitaires (`RelectureAssignmentServiceTest`) et d'intégration (`RelectureDeuxRelecteursIT`) verts, branche `evolution/30-...` séparée du correctif.
 
-**Bloqué :**
+**Bloqué :** ~15 min à chercher la vraie cause technique derrière le témoignage du client (« deux étudiants tapent le code en même temps, un seul apparaît ») : `PresenceService.marquerParCode` n'a pas de mutable state partagé ni de section critique évidente entre deux étudiants différents ; la traduction retenue est le TOCTOU classique `exists` puis `save` sur la contrainte unique `(session, étudiant)`, démontré par un vrai test à deux threads plutôt que supposé.
 
-**IA :**
+**IA :** m'a aidé à explorer le code service par service pour localiser une race condition plausible et cohérente avec le récit client, à écrire le test de concurrence à deux threads (`ExecutorService`, assertions sur les statuts HTTP exacts `[201, 409]`), et à concevoir la migration `V3` en évitant le piège déjà rencontré à l'étape 2 (id explicites qui font retarder la séquence IDENTITY) — vérifié en exécutant réellement Flyway contre H2 (`./mvnw -Dtest=RelectureDeuxRelecteursIT test`) et en lisant les logs de migration (« Successfully applied 3 migrations »), pas en se fiant à la lecture du SQL seule.
 
-**Ce que j'ai sorti du périmètre pour absorber le changement, et pourquoi :**
+**Ce que j'ai sorti du périmètre pour absorber le changement, et pourquoi :** (1) les exercices déjà relus avant cette évolution gardent leur note historique à un seul relecteur, sans rattrapage rétroactif — remigrer l'historique aurait exigé d'inventer un second relecteur a posteriori, ce qui n'a pas de sens métier (la relecture par les pairs présents à l'époque ne peut pas être reconstituée). (2) si moins de deux candidats sont présents au moment de l'assignation, aucun rattrapage automatique n'a lieu si un étudiant devient présent plus tard : construire ce mécanisme (écouter les nouvelles présences, réévaluer les exercices en attente) est un vrai morceau de travail que je préfère documenter comme dette plutôt que bâcler sous la pression du temps de l'épreuve.
 
 ---
 

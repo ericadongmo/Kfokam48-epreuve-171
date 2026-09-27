@@ -88,15 +88,36 @@ public class RelectureService {
         return new RelectureResponse(relecture.getId(), relecture.getStatut());
     }
 
-    /** EF14 · RG6 : jamais le nom ni l'identifiant du relecteur. */
+    /**
+     * EF14 · RG6 : jamais le nom ni l'identifiant du relecteur.
+     * EF9bis (évolution étape 3) : moyenne des relectures rendues, provisoire
+     * tant que l'une des relectures assignées n'a pas rendu. Le commentaire
+     * affiché est celui de la relecture rendue la plus récente.
+     */
     @Transactional(readOnly = true)
     public NoteExerciceResponse noteDeExercice(Long exerciceId) {
         if (!exerciceRepository.existsById(exerciceId)) {
             throw ApiException.exerciceInconnu();
         }
-        return relectureRepository.findByExerciceId(exerciceId)
-                .map(r -> new NoteExerciceResponse(r.getStatut(), r.getNote(), r.getCommentaire()))
-                .orElse(new NoteExerciceResponse(StatutRelecture.EN_ATTENTE, null, null));
+
+        List<Relecture> relectures = relectureRepository.findByExerciceId(exerciceId);
+        List<Relecture> rendues = relectures.stream()
+                .filter(r -> r.getStatut() == StatutRelecture.RENDUE)
+                .toList();
+
+        if (rendues.isEmpty()) {
+            return new NoteExerciceResponse(StatutRelecture.EN_ATTENTE, null, null, false);
+        }
+
+        double moyenne = rendues.stream().mapToInt(Relecture::getNote).average().orElseThrow();
+        String commentaire = rendues.stream()
+                .max(java.util.Comparator.comparing(Relecture::getRenduAt))
+                .map(Relecture::getCommentaire)
+                .orElse(null);
+        boolean provisoire = rendues.size() < relectures.size();
+        StatutRelecture statut = provisoire ? StatutRelecture.EN_COURS : StatutRelecture.RENDUE;
+
+        return new NoteExerciceResponse(statut, moyenne, commentaire, provisoire);
     }
 
     @Transactional(readOnly = true)
