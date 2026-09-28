@@ -20,7 +20,7 @@
 | | |
 |---|---|
 | Dépôt (public) | `https://github.com/ericadongmo/kfokam48-epreuve-171` |
-| Commit final — hash complet, 40 caractères | `PENDING` *(sera remplacé par le hash exact de ce commit une fois poussé)* |
+| Commit final — hash complet, 40 caractères | `d5f3bee01e5fd60ffb4673cccbb5e402d4e252a0` |
 | Branche | `main` |
 
 ## Épreuve Git — étape 5
